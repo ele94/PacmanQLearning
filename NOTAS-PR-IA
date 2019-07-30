@@ -1,0 +1,5 @@
+ python pacman.py -p EstimatePacmanMdpAgent -x 5 -n 7 -l smallRaquel -a "discount=0.7,iterations=120"
+
+ OK SCENARIOS ---
+
+ python pacman.py -p EstimatePacmanMdpAgent -x 2000 -n 2010    -k 1 -l smallGrid2  -a "iterations=50"
