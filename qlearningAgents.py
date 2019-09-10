@@ -18,7 +18,7 @@ from featureExtractors import *
 from numpy import zeros
 import numpy
 
-import random,util,math
+import random,util,math,pickle
 
 
 class QLearningAgent(ReinforcementAgent):
@@ -63,6 +63,25 @@ class QLearningAgent(ReinforcementAgent):
         
         "Otra qtable"
         self.QValueCounter = util.Counter()
+
+        # cargamos qvalues ya creados (?)
+        self.loadQTableFromFile('tables/smallgridfourthagent.pkl')
+        print "Loading qtable"
+
+    def final(self, state):
+        "Called at the end of each game."
+        # call the super-class final method
+        ReinforcementAgent.final(self, state)
+
+
+        if self.episodesSoFar <= self.numTraining:
+            self.saveQTableToFile('qvalues.pkl')
+        # did we finish training?
+        if self.episodesSoFar == self.numTraining:
+            # you might want to print your weights here for debugging
+            "*** YOUR CODE HERE ***"
+            pass
+
         
     def __del__(self):
         # # actualizamos la q table
@@ -75,8 +94,9 @@ class QLearningAgent(ReinforcementAgent):
         # # update qtable
         # if(self.previous_move < 5):
             # self.updateQTable(self.previous_state, self.previous_move, self.current_state, self.reward)
-    
-        self.saveQTable()
+
+        print "QTable size: ", len(self.QValueCounter)
+        #self.saveQTable()
 
     def getQValue(self, state, action):
         """
@@ -222,7 +242,13 @@ class QLearningAgent(ReinforcementAgent):
     
         return 0
               
-    
+    def saveQTableToFile(self, filename):
+        with open(filename, 'wb') as output:  # Overwrites any existing file.
+            pickle.dump(self.QValueCounter, output, pickle.HIGHEST_PROTOCOL)
+
+    def loadQTableFromFile(self, filename):
+        with open(filename, 'rb') as input:
+            self.QValueCounter = pickle.load(input)
     
     def getNearestGhostPosition(self, state):
         pacmanPosition = state.getPacmanPosition()
@@ -725,7 +751,9 @@ class PacmanFourthQAgent(PacmanQAgent):
         closest = self.getClosest(selfPosition, nearestFoodPosition, nearestGhostPosition)
         
         return (foodDistance, ghostDistance, wallTypeFood, wallTypeGhost, closest)
-        
+
+
+
     def getQuadrant(self, pacmanPosition, position):
         
         if position == None:
