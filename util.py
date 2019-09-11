@@ -270,6 +270,15 @@ class Counter(dict):
         for key in keys:
             self[key] += count
 
+
+    def roundAll(self, num):
+
+        for key in self:
+            self[key] = round(self[key], num)
+
+    def toString(self):
+        for key in self:
+            self[key] = str(self[key])
     def argMax(self):
         """
         Returns the key with the highest value.
@@ -424,6 +433,7 @@ class Counter(dict):
                 continue
             addend[key] = -1 * y[key]
         return addend
+
 
 def raiseNotDefined():
     fileName = inspect.stack()[1][1]
