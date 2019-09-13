@@ -65,7 +65,7 @@ class QLearningAgent(ReinforcementAgent):
         self.QValueCounter = util.Counter()
 
         # cargamos qvalues ya creados (?)
-        self.loadQTableFromFile('tables/smallgridfourthagent.pkl')
+        # self.loadQTableFromFile('tables/smallgridfourthagent.pkl')
         print "Loading qtable"
 
     def final(self, state):
@@ -947,6 +947,273 @@ class PacmanFourthQAgent(PacmanQAgent):
             #Fantasma encima de Pacman
             else: cuad = 8
         return cuad
+
+
+class PacmanFifthQAgent(PacmanQAgent):
+
+    def __init__(self, **args):
+        self.index = 0  # This is always Pacman
+        PacmanQAgent.__init__(self, **args)
+
+    def update(self, state, action, nextState, reward):
+        """
+          The parent class calls this to observe a
+          state = action => nextState and reward transition.
+          You should do your Q-Value update here
+
+          NOTE: You should never call this function,
+          it will be called on your behalf
+        """
+        "*** YOUR CODE HERE ***"
+
+        best_action = self.computeActionFromQValues(nextState)
+
+        self.QValueCounter[(self.getQState(state), action)] = ((1 - self.alpha) * self.getQValue(state, action) +
+                                                               self.alpha * (reward + self.discount * self.getQValue(
+                    nextState, best_action)))
+
+    def getQValue(self, state, action):
+        """
+          Returns Q(state,action)
+          Should return 0.0 if we have never seen a state
+          or the Q node value otherwise
+        """
+        "*** YOUR CODE HERE ***"
+        return self.QValueCounter[(self.getQState(state), action)]
+
+    def getQState(self, state):
+
+        nearestGhostPosition = self.getNearestGhostPosition(state)
+        nearestFoodPosition = self.getNearestFoodPosition(state)
+        selfPosition = state.getPacmanPosition()
+
+        nearestPillPosition = state.get
+
+        wallTypeFood = None
+        wallTypeGhost = None
+
+        if nearestFoodPosition is None:
+            foodDistance = Cuadrants.CENTER
+        else:
+            foodDistance = self.getQuadrant(selfPosition, nearestFoodPosition)
+            wallTypeFood = self.checkMuro(state, selfPosition[0], selfPosition[1], nearestFoodPosition[0],
+                                          nearestFoodPosition[1])
+
+        if nearestGhostPosition is None:
+            ghostDistance = Cuadrants.CENTER
+        else:
+            ghostDistance = self.getQuadrant(selfPosition, nearestGhostPosition)
+            wallTypeGhost = self.checkMuro(state, selfPosition[0], selfPosition[1], nearestGhostPosition[0],
+                                           nearestGhostPosition[1])
+
+        closest = self.getClosest(selfPosition, nearestFoodPosition, nearestGhostPosition)
+
+        return (foodDistance, ghostDistance, wallTypeFood, wallTypeGhost, closest)
+
+    def getQuadrant(self, pacmanPosition, position):
+
+        if position == None:
+            return None
+
+        if position[0] == pacmanPosition[0]:
+            if position[1] < pacmanPosition[1]:
+                return Cuadrants.SOUTH
+            elif position[1] == pacmanPosition[1]:
+                return Cuadrants.CENTER
+            else:
+                return Cuadrants.NORTH
+
+        elif position[1] == pacmanPosition[1]:
+            if position[0] < pacmanPosition[0]:
+                return Cuadrants.EAST
+            else:
+                return Cuadrants.WEST
+
+        elif position[0] < pacmanPosition[0]:
+            if position[1] < pacmanPosition[1]:
+                return Cuadrants.SOUTHWEST
+            else:
+                return Cuadrants.NORTHWEST
+        else:
+            if position[1] < pacmanPosition[1]:
+                return Cuadrants.SOUTHEAST
+            else:
+                return Cuadrants.NORTHEAST
+
+            # food closest: 0, ghost closest or same distance: 1
+
+    def getClosest(self, pacmanPosition, foodPosition, ghostPosition):
+
+        if foodPosition is None:
+            foodDistance = 1000
+        else:
+            foodDistance = util.manhattanDistance(pacmanPosition, foodPosition)
+        if ghostPosition is None:
+            ghostDistance = 1000
+        else:
+            ghostDistance = util.manhattanDistance(pacmanPosition, ghostPosition)
+
+        if foodDistance < ghostDistance:
+            return 0
+        else:
+            return 1
+
+    # Metodo que revisa si hay un muro entre Pacman y otro elemento cuyas posiciones son introducidas como argumentos
+    def checkMuro(self, state, colpac, filapac, colfant, filafant):
+        walls = state.data.layout.walls
+        xmax = state.data.layout.width
+        ymax = state.data.layout.height
+        tipofila = 0
+        tipocol = 0
+
+        # Si Pacman esta encima del fantasma
+        if filapac > filafant:
+            fila = filapac
+            while fila > filafant:
+                fila -= 1
+                if walls[colpac][fila] and fila > 0:
+                    tipofila = self.getTipo(fila, colpac, walls, xmax, ymax)
+                    if tipocol == 2 or tipocol == 5 or tipocol == 6: tipocol = 1
+                    return tipofila
+        # Si esta debajo
+        if filapac < filafant:
+            fila = filapac
+            while fila < filafant:
+                fila += 1
+                if walls[colpac][fila] and fila < ymax:
+                    tipofila = self.getTipo(fila, colpac, walls, xmax, ymax)
+                    if tipocol == 2 or tipocol == 5 or tipocol == 6: tipocol = 1
+                    return tipofila
+        # A la derecha
+        if colpac > colfant:
+            col = colpac
+            while col > colfant:
+                col -= 1
+                if walls[col][filapac] and col > 0:
+                    tipocol = self.getTipo(filapac, col, walls, xmax, ymax)
+                    if tipocol == 1 or tipocol == 3 or tipocol == 4: tipocol = 2
+
+                    return tipocol
+        # A la izquierda
+        if colpac < colfant:
+            col = colpac
+            while col < colfant:
+                col += 1
+                if walls[col][filapac] and col < xmax:
+                    tipocol = self.getTipo(filapac, col, walls, xmax, ymax)
+                    if tipocol == 1 or tipocol == 3 or tipocol == 4: tipocol = 2
+                    return tipocol
+
+        return 0
+
+    # Devuelve el tipo de muro cuyas posiciones son introducidas como argumentos
+    def getTipo(self, fila, col, walls, maxcol, maxfila):
+        clasif = -1
+        f = fila
+        cerradoIz1 = False
+        cerradoDer = False
+        cerradoabajo = False
+        cerradoarriba = False
+        c = col
+
+        clasif, cerradoIz1, cerradoDer = self.horizontal(walls, fila, col, maxcol)
+        if clasif == -1:
+            clasif, cerradoIz1, cerradoDer = self.vertical(walls, fila, col, maxfila, maxcol)
+
+        if clasif == 1 and cerradoIz1: clasif = 3
+        if clasif == 1 and cerradoDer: clasif = 4
+        if clasif == 2 and cerradoabajo: clasif = 5
+        if clasif == 2 and cerradoarriba: clasif = 6
+        return clasif
+
+    # En caso de que el muro sea horizontal define si esta cerrado o no y por que lado
+    def horizontal(self, walls, fila, col, maxcol):
+        c = col
+        clasif = -1
+        cerradoIz1 = False
+        cerradoDer = False
+        while c > 0 and (walls[c - 1][fila]):
+            c -= 1
+            clasif = 1
+            if c == 0:
+                cerradoIz1 = True
+
+        c = col
+        while c < maxcol - 1 and walls[c + 1][fila]:
+            clasif = 1
+            c += 1
+            if c == maxcol - 1:
+                cerradoDer = True
+
+        return clasif, cerradoIz1, cerradoDer
+
+    # En caso de que el muro sea vertical define si esta cerrado o no y por que lado
+    def vertical(self, walls, fila, col, maxfila, maxcol):
+        f = fila
+        clasif = -1
+        clasif2 = -1
+        cerradoIz1 = -1
+        cerradoDer = -1
+        cerradoabajo = False
+        cerradoarriba = False
+        while (walls[col][f - 1]) and f > 0:
+            clasif = 2
+            f -= 1
+            if not walls[col][f - 1] and f > 0:
+                clasif2, cerradoIz1, cerradoDer = self.horizontal(walls, f, col, maxcol)
+                if cerradoIz1: clasif = 3
+                if cerradoDer: clasif = 4
+            if f == 0:
+                cerradoabajo = True
+
+        f = fila
+        while (walls[col][f + 1]) and f < maxfila - 1:
+            clasif = 2
+            f += 1
+            if not walls[col][f + 1] and f < maxfila:
+                clasif2, cerradoIz1, cerradoDer = self.horizontal(walls, f, col, maxcol)
+                if cerradoIz1: clasif = 3
+                if cerradoDer: clasif = 4
+            if f == maxfila:
+                cerradoarriba = True
+
+        return clasif, cerradoabajo, cerradoarriba
+
+    # Identifica el cuadrante del elemento introducido como argumento respecto de Pacman
+    def cuadrante(self, colpac, filapac, colfant, filafant):
+        cuad = -1
+        if (filafant > filapac):
+            # Fantasma arriba-izq
+            if (colfant < colpac):
+                cuad = 0
+            # Fantasma arriba-derecha
+            elif (colfant > colpac):
+                cuad = 2
+            # Fantasma arriba
+            else:
+                cuad = 1
+        elif (filafant < filapac):
+            # Fantasma abajo-izq
+            if (colfant < colpac):
+                cuad = 6
+            # Fantasma abajo-derecha
+            elif (colfant > colpac):
+                cuad = 4
+            # Fantasma abajo
+            else:
+                cuad = 5
+        else:
+            # Fantasma izquierda
+            if (colfant < colpac):
+                cuad = 7
+            # Fantasma derecha
+            elif (colfant > colpac):
+                cuad = 3
+            # Fantasma encima de Pacman
+            else:
+                cuad = 8
+        return cuad
+
 
 
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""
